@@ -7,6 +7,18 @@ class BitrixService {
     this.baseURL = `https://${config.bitrix.domain}/rest/1/${config.bitrix.token}`;
   }
 
+  async getContactById(contactId) {
+    try {
+      const response = await axios.get(`${this.baseURL}/crm.contact.get.json`, {
+        params: { ID: contactId }
+      });
+      return response.data?.result || null;
+    } catch (error) {
+      console.error('Bitrix contact fetch error:', error);
+      return null;
+    }
+  }
+
   async createContact(contactData) {
     try {
       const response = await axios.post(`${this.baseURL}/crm.contact.add.json`, {

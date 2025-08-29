@@ -148,6 +148,40 @@ router.post('/create', validate(schemas.createAppeal), authenticateToken, async 
       AUTHOR_ID: contactId
     };
 
+    // Собираем COMMUNICATIONS из данных контакта, чтобы удовлетворить требования Bitrix
+    try {
+      const contact = await bitrixService.getContactById(contactId);
+      if (contact) {
+        const communications = [];
+        if (Array.isArray(contact.PHONE)) {
+          for (const phone of contact.PHONE) {
+            if (phone && phone.VALUE) {
+              communications.push({
+                TYPE: 'PHONE',
+                VALUE: phone.VALUE
+              });
+            }
+          }
+        }
+        if (Array.isArray(contact.EMAIL)) {
+          for (const email of contact.EMAIL) {
+            if (email && email.VALUE) {
+              communications.push({
+                TYPE: 'EMAIL',
+                VALUE: email.VALUE
+              });
+            }
+          }
+        }
+        if (communications.length > 0) {
+          activityFields.COMMUNICATIONS = communications;
+        }
+      }
+    } catch (e) {
+      // Логируем, но не прерываем создание активности
+      console.error('Fetch contact for communications error:', e);
+    }
+
     if (files && files.length > 0) {
       activityFields.FILES = files.map(file => ({
         fileData: [file.name, file.base64]
