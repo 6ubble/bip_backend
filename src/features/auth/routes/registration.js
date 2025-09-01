@@ -4,7 +4,7 @@ const passwordUtils = require('../../../utils/password');
 const jwtUtils = require('../../../utils/jwt');
 const phoneUtils = require('../../../utils/phone');
 const tokenGenerator = require('../../../utils/token-generator');
-const bitrixService = require('../../../services/bitrix');
+const { createContact, createCompany, createRequisite, findContact } = require('../utils/auth_bitrix_functions');
 const { validate, schemas } = require('../../../utils/validation');
 
 const router = express.Router();
@@ -13,7 +13,7 @@ router.post('/register/physical', validate(schemas.registerPhysical), async (req
   let connection;
   try {
     const { first_name, second_name, last_name, birthdate, phone, email, password } = req.body;
-    
+
     connection = await db.getConnection();
     await connection.beginTransaction();
 
@@ -34,7 +34,7 @@ router.post('/register/physical', validate(schemas.registerPhysical), async (req
     const phoneWithPlus = phoneUtils.formatWithPlus(phone);
 
     // Check Bitrix contact
-    const contactId = await bitrixService.findContact(email, phoneWithPlus);
+    const contactId = await findContact(email, phoneWithPlus);
 
     // Hash password
     const hashedPassword = await passwordUtils.hash(password);
@@ -65,7 +65,7 @@ router.post('/register/physical', validate(schemas.registerPhysical), async (req
         EMAIL: [{ VALUE: email, VALUE_TYPE: 'WORK' }]
       };
 
-      const newContactId = await bitrixService.createContact(contactData);
+      const newContactId = await createContact(contactData);
       if (newContactId) {
         await connection.execute(
           'UPDATE users SET contact_id = ? WHERE id = ?',
@@ -136,7 +136,7 @@ router.post('/register/legal', validate(schemas.registerLegal), async (req, res)
       company_name, inn, employee_first_name, employee_second_name,
       employee_last_name, phone, email, password
     } = req.body;
-    
+
     connection = await db.getConnection();
     await connection.beginTransaction();
 
@@ -159,7 +159,7 @@ router.post('/register/legal', validate(schemas.registerLegal), async (req, res)
     const phoneWithPlus = phoneUtils.formatWithPlus(phone);
 
     // Check Bitrix contact
-    const contactId = await bitrixService.findContact(email, phoneWithPlus);
+    const contactId = await findContact(email, phoneWithPlus);
 
     // Hash password
     const hashedPassword = await passwordUtils.hash(password);
@@ -199,7 +199,7 @@ router.post('/register/legal', validate(schemas.registerLegal), async (req, res)
       EMAIL: [{ VALUE: email, VALUE_TYPE: 'WORK' }]
     };
 
-    const bitrixCompanyId = await bitrixService.createCompany(companyData);
+    const bitrixCompanyId = await createCompany(companyData);
     if (!bitrixCompanyId) {
       await connection.rollback();
       return res.status(500).json({
@@ -214,7 +214,7 @@ router.post('/register/legal', validate(schemas.registerLegal), async (req, res)
     );
 
     // Create Bitrix requisites
-    const requisiteId = await bitrixService.createRequisite(bitrixCompanyId, inn, company_name);
+    const requisiteId = await createRequisite(bitrixCompanyId, inn, company_name);
     if (!requisiteId) {
       await connection.rollback();
       return res.status(500).json({
@@ -233,7 +233,7 @@ router.post('/register/legal', validate(schemas.registerLegal), async (req, res)
         COMPANY_ID: bitrixCompanyId
       };
 
-      const newContactId = await bitrixService.createContact(contactData);
+      const newContactId = await createContact(contactData);
       if (newContactId) {
         await connection.execute(
           'UPDATE users SET contact_id = ? WHERE id = ?',
@@ -311,7 +311,7 @@ router.post('/register/employee', validate(schemas.registerEmployee), async (req
       first_name, second_name, last_name, position,
       phone, email, password, company_token
     } = req.body;
-    
+
     connection = await db.getConnection();
     await connection.beginTransaction();
 
@@ -347,7 +347,7 @@ router.post('/register/employee', validate(schemas.registerEmployee), async (req
     const phoneWithPlus = phoneUtils.formatWithPlus(phone);
 
     // Check Bitrix contact
-    const contactId = await bitrixService.findContact(email, phoneWithPlus);
+    const contactId = await findContact(email, phoneWithPlus);
 
     // Hash password
     const hashedPassword = await passwordUtils.hash(password);
@@ -380,7 +380,7 @@ router.post('/register/employee', validate(schemas.registerEmployee), async (req
         COMPANY_ID: company.bitrix_company_id
       };
 
-      const newContactId = await bitrixService.createContact(contactData);
+      const newContactId = await createContact(contactData);
       if (newContactId) {
         await connection.execute(
           'UPDATE users SET contact_id = ? WHERE id = ?',

@@ -1,5 +1,7 @@
+const { getContactById } = require('../utils/bitrix_deal_functions')
+
 const express = require('express');
-const bitrixService = require('../../../services/bitrix');
+const { getDeals, getDealCategories, getStagesForCategory, createDeal, addActivity } = require('../utils/bitrix_deal_functions');
 const { authenticateToken } = require('../../../middleware/auth');
 const { validate, schemas } = require('../../../utils/validation');
 
@@ -12,10 +14,10 @@ router.get('/get-deals', authenticateToken, async (req, res) => {
       return res.status(422).json({ error: 'contact_id missing in token' });
     }
 
-    const deals = await bitrixService.getDeals(contactId);
+    const deals = await getDeals(contactId);
 
     for (const deal of deals) {
-      const stages = await bitrixService.getStagesForCategory(deal.CATEGORY_ID);
+      const stages = await getStagesForCategory(deal.CATEGORY_ID);
       const stageName = stages[deal.STAGE_ID]?.NAME || deal.STAGE_ID;
       deal.STAGE_NAME = stageName;
     }
@@ -36,18 +38,18 @@ router.get('/current', authenticateToken, async (req, res) => {
       return res.status(422).json({ error: 'contact_id missing in token' });
     }
 
-    const categories = await bitrixService.getDealCategories();
+    const categories = await getDealCategories();
     const categoryMap = {};
     categories.forEach(category => {
       categoryMap[category.id] = category.name;
     });
 
-    const deals = await bitrixService.getDeals(contactId, 'N');
+    const deals = await getDeals(contactId, 'N');
 
     const result = [];
     for (const deal of deals) {
       const categoryId = deal.CATEGORY_ID || '0';
-      const stages = await bitrixService.getStagesForCategory(categoryId);
+      const stages = await getStagesForCategory(categoryId);
 
       result.push({
         id: deal.ID,
@@ -71,13 +73,13 @@ router.get('/current', authenticateToken, async (req, res) => {
 
 router.get('/stages', async (req, res) => {
   try {
-    const categories = await bitrixService.getDealCategories();
+    const categories = await getDealCategories();
     console.log(categories)
     const funnels = [];
 
     for (const category of categories) {
       const categoryId = category.id.toString();
-      const stages = await bitrixService.getStagesForCategory(categoryId);
+      const stages = await getStagesForCategory(categoryId);
 
       const stageList = Object.entries(stages).map(([stageId, stageData]) => ({
         id: stageId,
@@ -108,14 +110,14 @@ router.post('/create', validate(schemas.createAppeal), authenticateToken, async 
       return res.status(400).json({ error: 'Отсутствует contact_id' });
     }
 
-    const categories = await bitrixService.getDealCategories();
+    const categories = await getDealCategories();
     const categoryIds = categories.map(cat => cat.id.toString());
 
     if (!categoryIds.includes(category_id)) {
       return res.status(400).json({ error: 'Неверный ID категории' });
     }
 
-    const stages = await bitrixService.getStagesForCategory(category_id);
+    const stages = await getStagesForCategory(category_id);
     const stageIds = Object.keys(stages);
 
     if (stageIds.length === 0) {
@@ -135,7 +137,7 @@ router.post('/create', validate(schemas.createAppeal), authenticateToken, async 
       OPENED: 'Y'
     };
 
-    const dealId = await bitrixService.createDeal(dealFields);
+    const dealId = await createDeal(dealFields);
     if (!dealId) {
       return res.status(500).json({ error: 'Ошибка создания сделки' });
     }
@@ -149,10 +151,9 @@ router.post('/create', validate(schemas.createAppeal), authenticateToken, async 
       COMPLETED: 'Y',
       AUTHOR_ID: contactId
     };
-
-    // Собираем COMMUNICATIONS из данных контакта, чтобы удовлетворить требования Bitrix
+    // Попытка получить контакт для заполнения COMMUNICATIONS
     try {
-      const contact = await bitrixService.getContactById(contactId);
+      const contact = await getContactById(contactId);
       if (contact) {
         const communications = [];
         if (Array.isArray(contact.PHONE)) {
@@ -190,7 +191,7 @@ router.post('/create', validate(schemas.createAppeal), authenticateToken, async 
       }));
     }
 
-    await bitrixService.addActivity(activityFields);
+    await addActivity(activityFields);
 
     res.json({
       deal_id: dealId.toString(),

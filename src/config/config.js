@@ -8,7 +8,8 @@ const config = {
   },
   bitrix: {
     domain: process.env.BITRIX_DOMAIN,
-    token: process.env.BITRIX_TOKEN
+    token: process.env.BITRIX_TOKEN,
+    url: `https://${process.env.BITRIX_DOMAIN}/rest/101/${process.env.BITRIX_TOKEN}`
   },
   database: {
     host: process.env.DB_HOST || 'localhost',
@@ -25,7 +26,7 @@ const config = {
   }
 };
 
-// Check required environment variables
+// Проверка наличия обязательных переменных окружения
 const requiredVars = [
   'SECRET_KEY',
   'BITRIX_DOMAIN', 
