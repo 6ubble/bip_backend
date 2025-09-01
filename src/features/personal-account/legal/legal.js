@@ -1,13 +1,12 @@
 const express = require('express');
-const db = require('../../config/database');
-const { authenticateToken } = require('../../middleware/auth');
+const db = require('../../../config/database');
+const { authenticateToken } = require('../../../middleware/auth');
 
 const router = express.Router();
 
 // Get company info
 router.get('/company/info', authenticateToken, async (req, res) => {
   try {
-    // Check if user is legal entity
     if (req.user.user_type !== 'legal') {
       return res.status(403).json({
         error: 'Доступно только для юридических лиц'
@@ -100,7 +99,6 @@ router.get('/company/employees', authenticateToken, async (req, res) => {
       [companyId]
     );
 
-    // Format data
     const formattedEmployees = employees.map(emp => ({
       id: emp.id,
       full_name: `${emp.last_name} ${emp.first_name} ${emp.second_name || ''}`.trim(),

@@ -1,7 +1,7 @@
 const express = require('express');
-const bitrixService = require('../../services/bitrix');
-const { authenticateToken } = require('../../middleware/auth');
-const { validate, schemas } = require('../../utils/validation');
+const bitrixService = require('../../../services/bitrix');
+const { authenticateToken } = require('../../../middleware/auth');
+const { validate, schemas } = require('../../../utils/validation');
 
 const router = express.Router();
 
@@ -13,7 +13,7 @@ router.get('/get-deals', authenticateToken, async (req, res) => {
     }
 
     const deals = await bitrixService.getDeals(contactId);
-    
+
     for (const deal of deals) {
       const stages = await bitrixService.getStagesForCategory(deal.CATEGORY_ID);
       const stageName = stages[deal.STAGE_ID]?.NAME || deal.STAGE_ID;
@@ -30,6 +30,7 @@ router.get('/get-deals', authenticateToken, async (req, res) => {
 
 router.get('/current', authenticateToken, async (req, res) => {
   try {
+    console.log("логин:", req.user)
     const contactId = req.user.contact_id;
     if (!contactId) {
       return res.status(422).json({ error: 'contact_id missing in token' });
@@ -47,7 +48,7 @@ router.get('/current', authenticateToken, async (req, res) => {
     for (const deal of deals) {
       const categoryId = deal.CATEGORY_ID || '0';
       const stages = await bitrixService.getStagesForCategory(categoryId);
-      
+
       result.push({
         id: deal.ID,
         title: deal.TITLE,
@@ -71,24 +72,25 @@ router.get('/current', authenticateToken, async (req, res) => {
 router.get('/stages', async (req, res) => {
   try {
     const categories = await bitrixService.getDealCategories();
+    console.log(categories)
     const funnels = [];
-    
+
     for (const category of categories) {
       const categoryId = category.id.toString();
       const stages = await bitrixService.getStagesForCategory(categoryId);
-      
+
       const stageList = Object.entries(stages).map(([stageId, stageData]) => ({
         id: stageId,
         name: stageData.NAME
       }));
-      
+
       funnels.push({
         id: categoryId,
-        name: category.name,
+        title: category.title,
         stages: stageList
       });
     }
-    
+
     res.json(funnels);
 
   } catch (error) {
@@ -101,21 +103,21 @@ router.post('/create', validate(schemas.createAppeal), authenticateToken, async 
   try {
     const { title, comment, files, category_id } = req.body;
     const contactId = req.user.contact_id;
-    
+
     if (!contactId) {
       return res.status(400).json({ error: 'Отсутствует contact_id' });
     }
 
     const categories = await bitrixService.getDealCategories();
     const categoryIds = categories.map(cat => cat.id.toString());
-    
+
     if (!categoryIds.includes(category_id)) {
       return res.status(400).json({ error: 'Неверный ID категории' });
     }
 
     const stages = await bitrixService.getStagesForCategory(category_id);
     const stageIds = Object.keys(stages);
-    
+
     if (stageIds.length === 0) {
       return res.status(400).json({ error: 'Нет доступных стадий для выбранной категории' });
     }

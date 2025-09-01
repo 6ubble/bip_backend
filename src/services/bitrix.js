@@ -4,9 +4,9 @@ const phoneUtils = require('../utils/phone');
 
 class BitrixService {
   constructor() {
-    this.baseURL = `https://${config.bitrix.domain}/rest/1/${config.bitrix.token}`;
+    this.baseURL = `https://${config.bitrix.domain}/rest/101/${config.bitrix.token}`;
   }
-
+  // Получение контакта по ID
   async getContactById(contactId) {
     try {
       const response = await axios.get(`${this.baseURL}/crm.contact.get.json`, {
@@ -18,13 +18,13 @@ class BitrixService {
       return null;
     }
   }
-
+  // Cоздание контакта
   async createContact(contactData) {
     try {
       const response = await axios.post(`${this.baseURL}/crm.contact.add.json`, {
         fields: contactData
       });
-      
+
       if (response.data && response.data.result) {
         return response.data.result;
       }
@@ -34,13 +34,13 @@ class BitrixService {
       return null;
     }
   }
-
+  // Cоздание компании
   async createCompany(companyData) {
     try {
       const response = await axios.post(`${this.baseURL}/crm.company.add.json`, {
         fields: companyData
       });
-      
+
       if (response.data && response.data.result) {
         return response.data.result;
       }
@@ -50,7 +50,7 @@ class BitrixService {
       return null;
     }
   }
-
+  // Создание реквизитов компании
   async createRequisite(companyId, inn, companyName) {
     try {
       const data = {
@@ -67,7 +67,7 @@ class BitrixService {
       };
 
       const response = await axios.post(`${this.baseURL}/crm.requisite.add.json`, data);
-      
+
       if (response.data && response.data.result) {
         return response.data.result;
       }
@@ -77,11 +77,11 @@ class BitrixService {
       return null;
     }
   }
-
+  // Поиск контакта по email и телефону
   async findContact(email, phone) {
     try {
       const phoneWithPlus = phoneUtils.formatWithPlus(phone);
-      
+
       const response = await axios.get(`${this.baseURL}/crm.contact.list.json`, {
         params: {
           'filter[PHONE]': phoneWithPlus,
@@ -91,7 +91,7 @@ class BitrixService {
       });
 
       const contacts = response.data.result || [];
-      
+
       if (contacts.length === 0) {
         return null;
       }
@@ -101,10 +101,10 @@ class BitrixService {
         const emails = contact.EMAIL || [];
         const phones = contact.PHONE || [];
 
-        const emailMatch = emails.some(e => 
+        const emailMatch = emails.some(e =>
           e.VALUE && e.VALUE.toLowerCase() === email.toLowerCase()
         );
-        const phoneMatch = phones.some(p => 
+        const phoneMatch = phones.some(p =>
           p.VALUE === phoneWithPlus
         );
 
@@ -121,7 +121,7 @@ class BitrixService {
       return null;
     }
   }
-
+  // Получение сделок по ID контакта
   async getDeals(contactId, closedFilter = null) {
     try {
       const params = {
@@ -130,6 +130,7 @@ class BitrixService {
         'order[DATE_CREATE]': 'DESC'
       };
 
+
       if (closedFilter !== null) {
         params['filter[CLOSED]'] = closedFilter;
       }
@@ -137,39 +138,54 @@ class BitrixService {
       const response = await axios.get(`${this.baseURL}/crm.deal.list.json`, {
         params
       });
-
+      console.log(response.data.result)
       return response.data.result || [];
     } catch (error) {
       console.error('Bitrix deals fetch error:', error);
       throw error;
     }
+
   }
 
+  // Получить список доступных тем обращений и их наименования (включая привязку к categoryID в сделках)
   async getDealCategories() {
     try {
-      const response = await axios.get(`${this.baseURL}/crm.category.list.json`, {
-        params: { entityTypeId: 2 }
+      const response = await axios.get(`${this.baseURL}/crm.item.list.json`, {
+        params: {
+          entityTypeId: 1054,
+          'filter[!=ufCrm17_1756699402]': 'Y',
+          'filter[ufCrm17_1756699478]': 141,
+          'select[]': [
+            'ID',
+            'title',
+            'ufCrm17_1756699384',
+            'ufCrm17_1756699424',
+            'ufCrm17_1756699402'
+          ]
+        }
       });
-      return response.data.result?.categories || [];
+
+      return response.data.result?.items || [];
     } catch (error) {
-      console.error('Bitrix categories fetch error:', error);
+      console.error('Bitrix categories fetch error:', error.response?.data || error);
       throw error;
     }
   }
+
 
   async getStagesForCategory(categoryId) {
     try {
       const response = await axios.get(`${this.baseURL}/crm.status.list.json`, {
         params: { 'filter[ENTITY_ID]': `DEAL_STAGE_${categoryId}` }
       });
-      
+
       const stages = {};
       const results = response.data.result || [];
-      
+
       results.forEach(stage => {
         stages[stage.STATUS_ID] = { NAME: stage.NAME };
       });
-      
+
       return stages;
     } catch (error) {
       console.error('Bitrix stages fetch error:', error);
@@ -182,7 +198,7 @@ class BitrixService {
       const response = await axios.post(`${this.baseURL}/crm.deal.add.json`, {
         fields: dealData
       });
-      
+
       if (response.data && response.data.result) {
         return response.data.result;
       }
@@ -198,7 +214,7 @@ class BitrixService {
       const response = await axios.post(`${this.baseURL}/crm.activity.add.json`, {
         fields: activityData
       });
-      
+
       if (response.data && response.data.result) {
         return response.data.result;
       }
@@ -216,12 +232,12 @@ class BitrixService {
           'filter[OWNER_TYPE_ID]': 2,
           'filter[OWNER_ID]': dealId,
           'select[]': [
-            'ID', 'SUBJECT', 'COMMUNICATIONS', 'DESCRIPTION', 
+            'ID', 'SUBJECT', 'COMMUNICATIONS', 'DESCRIPTION',
             'FILES', 'CREATED', 'AUTHOR_ID', 'STORAGE_ELEMENT_IDS'
           ]
         }
       });
-      
+
       const activities = response.data.result || [];
 
       // Process activities like in Python version
@@ -262,7 +278,7 @@ class BitrixService {
           }
         }
       }
-      
+
       return activities;
     } catch (error) {
       console.error('Bitrix activities fetch error:', error);
@@ -276,7 +292,7 @@ class BitrixService {
         id: activityId,
         fields: updateData
       });
-      
+
       if (response.data && response.data.result) {
         return response.data.result;
       }

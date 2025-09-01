@@ -5,18 +5,18 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
 
-// Routes import
-const authRoutes = require('./src/auth/routes');
-const userRoutes = require('./src/user/routes');
-const dealsRoutes = require('./src/deals/routes');
-const transactionsRoutes = require('./src/transactions/routes');
-const personalAccountRoutes = require('./src/personal-account/routes');
-const chatRoutes = require('./src/chat/routes'); // НОВЫЙ МОДУЛЬ
+// Импорт роутов
+const authRoutes = require('./src/features/auth/routes');
+const userRoutes = require('./src/features/user/routes');
+const dealsRoutes = require('./src/features/deals/routes');
+const transactionsRoutes = require('./src/features/transactions/routes');
+const personalAccountRoutes = require('./src/features/personal-account/');
 
 const app = express();
 const PORT = process.env.PORT || 8000;
 
-// Middleware
+
+// Миддлвары
 app.use(helmet());
 app.use(morgan('combined'));
 app.use(cors({
@@ -27,16 +27,16 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Routes
+
+// Руты
 app.use('/auth', authRoutes);
 app.use('/user', userRoutes);
 app.use('/deals', dealsRoutes);
 app.use('/transactions', transactionsRoutes);
 app.use('/personal_account', personalAccountRoutes);
-app.use('/chat', chatRoutes); // НОВЫЙ РОУТ ДЛЯ ЧАТА
 
 app.get('/api', (req, res) => {
-  res.json({ 
+  res.json({
     message: 'BIP API is running on Node.js',
     version: '1.0.0',
     endpoints: {

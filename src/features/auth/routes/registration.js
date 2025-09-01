@@ -1,11 +1,11 @@
 const express = require('express');
-const db = require('../../config/database');
-const passwordUtils = require('../../utils/password');
-const jwtUtils = require('../../utils/jwt');
-const phoneUtils = require('../../utils/phone');
-const tokenGenerator = require('../../utils/token-generator');
-const bitrixService = require('../../services/bitrix');
-const { validate, schemas } = require('../../utils/validation');
+const db = require('../../../config/database');
+const passwordUtils = require('../../../utils/password');
+const jwtUtils = require('../../../utils/jwt');
+const phoneUtils = require('../../../utils/phone');
+const tokenGenerator = require('../../../utils/token-generator');
+const bitrixService = require('../../../services/bitrix');
+const { validate, schemas } = require('../../../utils/validation');
 
 const router = express.Router();
 
