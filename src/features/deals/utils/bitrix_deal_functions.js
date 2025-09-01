@@ -6,6 +6,7 @@ const getDeals = async (contactId, closedFilter = null) => {
     try {
         const params = {
             'filter[CONTACT_ID]': contactId,
+            'filter[UF_CRM_1756703320]': 1, // фильтрация только по "Выгружать на сайт"
             'select[]': ['ID', 'TITLE', 'STAGE_ID', 'OPPORTUNITY', 'DATE_CREATE', 'CATEGORY_ID'],
             'order[DATE_CREATE]': 'DESC'
         };
@@ -20,7 +21,7 @@ const getDeals = async (contactId, closedFilter = null) => {
         console.log(response.data.result);
         return response.data.result || [];
     } catch (error) {
-        console.error('Bitrix deals fetch error:', error);
+        console.error('Ошибка Битрикс:', error);
         throw error;
     }
 };
@@ -77,7 +78,10 @@ const getStagesForCategory = async (categoryId) => {
 const createDeal = async (dealData) => {
     try {
         const response = await axios.post(`${config.bitrix.url}/crm.deal.add.json`, {
-            fields: dealData
+            fields: {
+                ...dealData,
+                UF_CRM_1756703320: 1 // . Поле используется для управления выдачей в личный кабинет и называется «Выгружать на сайт».
+            }
         });
 
         if (response.data && response.data.result) {
@@ -85,7 +89,7 @@ const createDeal = async (dealData) => {
         }
         return null;
     } catch (error) {
-        console.error('Bitrix deal creation error:', error);
+        console.error('Ошибка создания сделки:', error);
         throw error;
     }
 };

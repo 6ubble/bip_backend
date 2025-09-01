@@ -7,30 +7,8 @@ const { validate, schemas } = require('../../../utils/validation');
 
 const router = express.Router();
 
+
 router.get('/get-deals', authenticateToken, async (req, res) => {
-  try {
-    const contactId = req.user.contact_id;
-    if (!contactId) {
-      return res.status(422).json({ error: 'contact_id missing in token' });
-    }
-
-    const deals = await getDeals(contactId);
-
-    for (const deal of deals) {
-      const stages = await getStagesForCategory(deal.CATEGORY_ID);
-      const stageName = stages[deal.STAGE_ID]?.NAME || deal.STAGE_ID;
-      deal.STAGE_NAME = stageName;
-    }
-
-    res.json(deals);
-
-  } catch (error) {
-    console.error('Get deals error:', error);
-    res.status(500).json({ error: 'Bitrix24 request error' });
-  }
-});
-
-router.get('/current', authenticateToken, async (req, res) => {
   try {
     console.log("логин:", req.user)
     const contactId = req.user.contact_id;
@@ -134,7 +112,7 @@ router.post('/create', validate(schemas.createAppeal), authenticateToken, async 
       COMMENTS: comment,
       OPPORTUNITY: '0',
       CURRENCY_ID: 'RUB',
-      OPENED: 'Y'
+      OPENED: 'Y',
     };
 
     const dealId = await createDeal(dealFields);
