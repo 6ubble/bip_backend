@@ -40,7 +40,7 @@ router.get('/get-deals', authenticateToken, async (req, res) => {
 
                 return {
                     id: deal.ID,
-                    title: deal.TITLE,
+                    title: deal.TITLE || `Сделка #${deal.ID}`,
                     category_id: categoryId,
                     category_name: categoryMap[categoryId] || 'Неизвестная воронка',
                     stage_id: deal.STAGE_ID,
