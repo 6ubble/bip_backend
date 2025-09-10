@@ -1,6 +1,6 @@
 const express = require('express');
 const { authenticateToken } = require('../../../middleware/auth');
-const { getDeals } = require('../utils/bitrix_deal_functions');
+const { getDeals, canReplyToAppeal } = require('../utils/bitrix_deal_functions');
 
 const router = express.Router();
 
@@ -11,13 +11,20 @@ router.get('/get-deals', authenticateToken, async (req, res) => {
 
         const deals = await getDeals(contactId, 'N'); // просто один промис
 
-        const dealsData = deals.map(deal => ({
-            id: deal.ID || deal.Id || null,
-            title: deal.TITLE || `Сделка #${deal.ID || deal.Id || 'unknown'}`,
-            category_id: deal.CATEGORY_ID || null,
-            stage: deal.STAGE_ID || null,   // просто возвращаем Stage ID, стадий больше нет
-            opportunity: deal.OPPORTUNITY || '0',
-            created_at: deal.DATE_CREATE || null
+        // Обрабатываем сделки и проверяем возможность ответа для каждой
+        const dealsData = await Promise.all(deals.map(async (deal) => {
+            const dealId = deal.ID || deal.Id || null;
+            const canReply = dealId ? await canReplyToAppeal(dealId) : false;
+            
+            return {
+                id: dealId,
+                title: deal.TITLE || `Сделка #${dealId || 'unknown'}`,
+                category_id: deal.CATEGORY_ID || null,
+                stage: deal.STAGE_ID || null,   // просто возвращаем Stage ID, стадий больше нет
+                opportunity: deal.OPPORTUNITY || '0',
+                created_at: deal.DATE_CREATE || null,
+                can_reply: canReply // Добавляем информацию о возможности ответа
+            };
         }));
 
         res.json(dealsData);

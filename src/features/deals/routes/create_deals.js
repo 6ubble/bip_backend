@@ -1,6 +1,6 @@
 const express = require('express');
 const { authenticateToken } = require('../../../middleware/auth');
-const { bitrixRequest, getDealCategories, getContactById, createDeal, addActivity } = require('../utils/bitrix_deal_functions');
+const { bitrixRequest, getContactById, createDeal, addActivity } = require('../utils/bitrix_deal_functions');
 const { validate, schemas } = require('../../../utils/validation');
 
 const router = express.Router();
@@ -72,7 +72,6 @@ router.post('/create-deal', validate(schemas.createAppeal), authenticateToken, a
             CURRENCY_ID: 'RUB',
             OPENED: 'Y'
         };
-        console.log(dealFields)
 
         // --- Создаём сделку ---
         const dealId = await createDeal(dealFields);
