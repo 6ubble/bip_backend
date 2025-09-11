@@ -19,22 +19,6 @@ const bitrixRequest = async (endpoint, params = {}, method = 'GET', data = null)
 };
 
 
-// Получение сделок по ID контакта
-const getDeals = async (contactId, closedFilter = null) => {
-    const params = {
-        'filter[CONTACT_ID]': contactId,
-        'filter[UF_CRM_1756703320]': 1,
-        'select[]': ['ID', 'TITLE', 'STAGE_ID', 'OPPORTUNITY', 'DATE_CREATE', 'CATEGORY_ID'],
-        'order[DATE_CREATE]': 'DESC'
-    };
-
-    if (closedFilter !== null) {
-        params['filter[CLOSED]'] = closedFilter;
-    }
-
-    return await bitrixRequest('crm.deal.list', params) || [];
-};
-
 // Создание сделки
 const createDeal = async (dealFields) => {
     try {
@@ -103,26 +87,7 @@ const getItemStatus = async (dealId) => {
     }));
 };
 
-// Проверка возможности ответа на обращение
-const canReplyToAppeal = async (dealId) => {
-    try {
-        const statuses = await getItemStatus(dealId);
 
-        // Если нет статусов, возвращаем false
-        if (!statuses || statuses.length === 0) {
-            return false;
-        }
-
-        // Берем первый элемент (самый последний по дате из-за сортировки DESC)
-        const lastStatus = statuses[0];
-
-        // Проверяем, равен ли последний статус 151 (проверяем и строку, и число)
-        return lastStatus.status2 === '151' || lastStatus.status2 === 151;
-    } catch (error) {
-        console.error('Error checking reply status:', error);
-        return false;
-    }
-};
 
 // Получение детальной информации об обращении для ответа
 const getAppealDetails = async (dealId) => {
@@ -384,12 +349,10 @@ const createSmartProcessItem = async (dealId, message, files = []) => {
 
 module.exports = {
     bitrixRequest,
-    getDeals,
     getContactById,
     createDeal,
     addActivity,
     getItemStatus,
-    canReplyToAppeal,
     getAppealDetails,
     getFileInfo,
     getDealFiles,
