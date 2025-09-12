@@ -1,6 +1,5 @@
 const { bitrixRequest, getItemStatus } = require('./bitrix_deal_functions')
 
-
 // Получение сделок по ID контакта
 const getDeals = async (contactId, closedFilter = null) => {
     const params = {
@@ -17,50 +16,121 @@ const getDeals = async (contactId, closedFilter = null) => {
     return await bitrixRequest('crm.deal.list', params) || [];
 };
 
-
-// Функция, которая принимает айди сделки и возвращает её последний статус и дату
+// ИСПРАВЛЕННАЯ функция получения стадий сделки
 const getDealStages = async (dealId) => {
-    const result = await bitrixRequest('crm.item.list', {}, 'POST', {
-        entityTypeId: 1058,
-        filter: {
-            parentId2: dealId
-        },
-        order: { id: 'ASC' }, // сортировка по id
-        select: [
-            "ufCrm19_1756702291", // статус
-            "ufCrm19_1756702224"  // дата статуса
-        ]
-    });
+    try {
+        // Проверяем, что dealId существует
+        if (!dealId) {
+            console.warn('getDealStages: dealId is missing');
+            return null;
+        }
 
-    const items = result?.items || [];
-    if (items.length === 0) return null;
+        // Используем GET метод с правильными параметрами
+        const params = {
+            entityTypeId: 1058,
+            'filter[parentId2]': dealId,
+            'order[id]': 'ASC',
+            'select[]': [
+                'ufCrm19_1756702291', // статус
+                'ufCrm19_1756702224'  // дата статуса
+            ]
+        };
 
-    const lastItem = items.at(-1);
+        const result = await bitrixRequest('crm.item.list', params);
+        
+        // Дополнительная проверка результата
+        if (!result || !result.items) {
+            console.warn(`getDealStages: No items found for dealId ${dealId}`);
+            return null;
+        }
 
-    return {
-        status: lastItem.ufCrm19_1756702291 || null,
-        date: lastItem.ufCrm19_1756702224 || null
-    };
+        const items = result.items;
+        
+        if (items.length === 0) {
+            console.warn(`getDealStages: Empty items array for dealId ${dealId}`);
+            return null;
+        }
+
+        // Берем первый элемент для даты
+        const firstItem = items[0];
+        // Берем последний элемент для статуса
+        const lastItem = items.at(-1);
+        
+        if (!firstItem || !lastItem) {
+            console.warn(`getDealStages: Missing items for dealId ${dealId}`);
+            return null;
+        }
+
+        return {
+            status: lastItem.ufCrm19_1756702291 || 'Не указан', // статус из последнего
+            date: firstItem.ufCrm19_1756702224, // дата из первого
+            // Добавляем отладочную информацию
+            itemsCount: items.length,
+            dealId: dealId,
+            statusFromItemId: lastItem.id,
+            dateFromItemId: firstItem.id,
+            // Для отладки - показываем все статусы
+            allStatuses: items.map(item => ({
+                id: item.id,
+                status: item.ufCrm19_1756702291,
+                date: item.ufCrm19_1756702224
+            }))
+        };
+
+    } catch (error) {
+        console.error(`getDealStages error for dealId ${dealId}:`, error);
+        return null;
+    }
 };
-
 
 // Проверка возможности ответа на обращение
 const canReplyToAppeal = async (dealId) => {
     try {
-        const statuses = await getItemStatus(dealId);
-
-        // Если нет статусов, возвращаем false
-        if (!statuses || statuses.length === 0) {
+        if (!dealId) {
             return false;
         }
 
-        // Берем первый элемент (самый последний по дате из-за сортировки DESC)
-        const lastStatus = statuses[0];
+        // Используем тот же запрос, что и в getDealStages
+        const params = {
+            entityTypeId: 1058,
+            'filter[parentId2]': dealId,
+            'order[id]': 'ASC',
+            'select[]': [
+                'ufCrm19_1756701977', // status2 поле
+                'ufCrm19_1756702291', // статус
+                'ufCrm19_1756702224'  // дата статуса
+            ]
+        };
 
-        // Проверяем, равен ли последний статус 151 (проверяем и строку, и число)
-        return lastStatus.status2 === '151' || lastStatus.status2 === 151;
+        const result = await bitrixRequest('crm.item.list', params);
+        
+        if (!result || !result.items || result.items.length === 0) {
+            return false;
+        }
+
+        // Берем последний элемент (как в getDealStages)
+        const lastItem = result.items.at(-1);
+        
+        if (!lastItem) {
+            return false;
+        }
+
+        // Проверяем статус
+        const status2 = lastItem.ufCrm19_1756701977;
+        const canReply = status2 === 151 || status2 === '151';
+        
+        console.log(`canReplyToAppeal for dealId ${dealId}:`, {
+            canReply,
+            status2,
+            status2Type: typeof status2,
+            itemId: lastItem.id,
+            totalItems: result.items.length
+        });
+        
+        return canReply;
+        
     } catch (error) {
-        console.error('Error checking reply status:', error);
+        console.error(`canReplyToAppeal error for dealId ${dealId}:`, error);
         return false;
     }
 };
