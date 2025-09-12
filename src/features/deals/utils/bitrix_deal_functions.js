@@ -307,21 +307,33 @@ const getLatestDealFiles = async (dealId) => {
 // Создание элемента смарт-процесса для ответа на обращение
 const createSmartProcessItem = async (dealId, message, files = []) => {
     try {
+        console.log('Creating smart process item with files:', files.length);
+
         // Получаем текущую дату в формате ISO с часовым поясом UTC+5 (Екатеринбург)
         const now = new Date();
         const ekaterinburgTime = new Date(now.getTime() + (5 * 60 * 60 * 1000)); // UTC+5
         const isoDateTime = ekaterinburgTime.toISOString().replace('Z', '+05:00');
 
-        // Подготавливаем файлы для Bitrix
-        const bitrixFiles = [];
-        for (const file of files) {
-            if (file && file.name && file.base64) {
-                bitrixFiles.push({
-                    fileData: file.base64,
-                    fileName: file.name
-                });
+        // ✅ ПРАВИЛЬНАЯ подготовка файлов для Bitrix24
+        const preparedFiles = [];
+
+        if (Array.isArray(files) && files.length > 0) {
+            for (const file of files) {
+                if (file && file.name && file.base64) {
+                    // Убеждаемся, что base64 не содержит префикс data:
+                    const cleanBase64 = file.base64.replace(/^data:[^;]+;base64,/, '');
+
+                    preparedFiles.push([
+                        file.name,
+                        cleanBase64
+                    ]);
+
+                    console.log(`Prepared file: ${file.name}, size: ${cleanBase64.length} chars`);
+                }
             }
         }
+
+        console.log('Total prepared files:', preparedFiles.length);
 
         // Поля элемента смарт-процесса
         const itemFields = {
@@ -330,8 +342,15 @@ const createSmartProcessItem = async (dealId, message, files = []) => {
             ufCrm19_1756701977: 159,
             ufCrm19_1756702224: isoDateTime,
             ufCrm19_1757303366: message,
-            ufCrm19_1757302734: bitrixFiles
         };
+
+        // ✅ ПРАВИЛЬНОЕ добавление файлов в поле
+        if (preparedFiles.length > 0) {
+            itemFields.ufCrm19_1757303943 = preparedFiles;
+            console.log('Added files to field ufCrm19_1757303943:', preparedFiles.length);
+        }
+
+        console.log('Final itemFields:', JSON.stringify(itemFields, null, 2));
 
         // Создаем элемент через crm.item.add
         const result = await bitrixRequest('crm.item.add', {}, 'POST', {
@@ -339,10 +358,12 @@ const createSmartProcessItem = async (dealId, message, files = []) => {
             fields: itemFields
         });
 
-        return result; // Возвращает ID созданного элемента
+        console.log('Smart process item created successfully:', result);
+        return result;
 
     } catch (error) {
         console.error('Error creating smart process item:', error);
+        console.error('Error details:', error.response?.data);
         throw error;
     }
 };

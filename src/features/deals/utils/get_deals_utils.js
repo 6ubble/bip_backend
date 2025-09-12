@@ -1,4 +1,4 @@
-const { bitrixRequest, getItemStatus } = require('./bitrix_deal_functions')
+const { bitrixRequest } = require('./bitrix_deal_functions')
 
 // Получение сделок по ID контакта
 const getDeals = async (contactId, closedFilter = null) => {
@@ -16,7 +16,7 @@ const getDeals = async (contactId, closedFilter = null) => {
     return await bitrixRequest('crm.deal.list', params) || [];
 };
 
-// ИСПРАВЛЕННАЯ функция получения стадий сделки
+// Функция получения стадий сделки
 const getDealStages = async (dealId) => {
     try {
         // Проверяем, что dealId существует
